@@ -29,7 +29,7 @@ class decisionnode:
         self.fb = fb
 
 def divideset(rows,column,value):
-    if isinstance(value,int) or isinstance(value,float):
+    if isinstance(value, (int, float)):
         split_function = lambda row: row[column]>=value
     else:
         split_function = lambda row: row[column]==value
@@ -64,15 +64,13 @@ def buildtree(rows,scoref=entropy):
     lowest_impurity = scoref(rows)
     best_split = None
     best_sets = None
-    
+
     column_count = len(rows[0])-1
 
     for col in range(0,column_count):
-        # Generate the list of different values in this column
-        column_values = {}
-        for row in rows: column_values[row[col]] = 1
+        column_values = {row[col]: 1 for row in rows}
         # Now divide the rows up for each value in this column
-        for value in column_values.keys():
+        for value in column_values:
             (set1,set2) = divideset(rows,col,value)
             exp_impurity = float(len(set1))/len(rows) * scoref(set1) + float(len(set2))/len(rows) * scoref(set2)
             if exp_impurity < lowest_impurity and len(set1)>0 and len(set2)>0:
@@ -89,15 +87,14 @@ def buildtree(rows,scoref=entropy):
         return decisionnode(results=uniquecounts(rows))
 
 def printtree(tree, indent='  '):
-    if tree.results != None:
-        print (tree.results)
-    else:
-        print (str(tree.col) + ':' + str(tree.value) + '?')
+    if tree.results is None:
+        print(f'{str(tree.col)}:{str(tree.value)}?')
 
-        print (indent+'T->',
-        printtree(tree.tb, indent+'  '))
-        print (indent+'F->',        
-        printtree(tree.fb, indent+'  '))        
+        print(f'{indent}T->', printtree(tree.tb, f'{indent}  '))
+        print(f'{indent}F->', printtree(tree.fb, f'{indent}  '))        
+
+    else:
+        print (tree.results)        
 
 print (divideset(my_data,2,'yes'))
 
@@ -110,11 +107,11 @@ tree = buildtree(my_data)
 printtree(tree)
 
 def getwidth(tree):
-    if tree.tb==None and tree.fb==None: return 1
+    if tree.tb is None and tree.fb is None: return 1
     return getwidth(tree.tb)+getwidth(tree.fb)
 
 def getdepth(tree):
-    if tree.tb==None and tree.fb==None: return 0
+    if tree.tb is None and tree.fb is None: return 0
     return max(getdepth(tree.tb),getdepth(tree.fb))+1
 
 from PIL import Image, ImageDraw
@@ -130,7 +127,7 @@ def drawtree(tree,jpeg='tree.jpg'):
     img.save(jpeg,'JPEG')
 
 def drawnode(draw,tree,x,y):
-    if tree.results==None:
+    if tree.results is None:
         # Get the width of each branch
         w1=getwidth(tree.fb)*100
         w2=getwidth(tree.tb)*100
@@ -138,14 +135,14 @@ def drawnode(draw,tree,x,y):
         left=x-(w1+w2)/2
         right=x+(w1+w2)/2
         # Draw the condition string
-        draw.text((x-20,y-10),str(tree.col)+':'+str(tree.value),(0,0,0))
+        draw.text((x-20,y-10), f'{str(tree.col)}:{str(tree.value)}', (0,0,0))
         # Draw links to the branches
         draw.line((x,y,left+w1/2,y+100),fill=(255,0,0))
         draw.line((x,y,right-w2/2,y+100),fill=(255,0,0))
         # Draw the branch nodes
         drawnode(draw,tree.fb,left+w1/2,y+100)
         drawnode(draw,tree.tb,right-w2/2,y+100)
-    
+
     else:
         txt=' \n'.join(['%s:%d'%v for v in tree.results.items()])
         draw.text((x-20,y),txt,(0,0,0))
